@@ -520,7 +520,7 @@ menu separator
                                            index = index)
 
             if default:
-                cfg += "menu default\n"
+                cfg += "  menu default\n"
                 default_version = version
                 default_index = index
 
