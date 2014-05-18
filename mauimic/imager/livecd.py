@@ -97,6 +97,9 @@ class LiveImageCreatorBase(LoopImageCreator):
                                  "dd",
                                  "genisoimage"])
 
+        # Force distro name to Maui
+        self.distro_name = "Maui"
+
     #
     # Hooks for subclasses
     #
@@ -289,7 +292,8 @@ class x86LiveImageCreator(LiveImageCreatorBase):
                LiveImageCreatorBase._get_required_packages(self)
 
     def _get_isolinux_stanzas(self, isodir):
-        return ""
+        return """menu end
+"""
 
     def __find_syslinux_menu(self):
         for menu in ["vesamenu.c32", "menu.c32"]:
@@ -376,17 +380,39 @@ default %(menu)s
 timeout %(timeout)d
 
 %(background)s
-menu title Welcome to %(distroname)s!
-menu color border 0 #ffffffff #00000000
-menu color sel 7 #ffffffff #ff000000
-menu color title 0 #ffffffff #00000000
-menu color tabmsg 0 #ffffffff #00000000
-menu color unsel 0 #ffffffff #00000000
-menu color hotsel 0 #ff000000 #ffffffff
-menu color hotkey 7 #ffffffff #ff000000
-menu color timeout_msg 0 #ffffffff #00000000
-menu color timeout 0 #ffffffff #00000000
-menu color cmdline 0 #ffffffff #00000000
+menu autoboot Starting %(distroname)s in # second{,s}. Press any key to interrupt.
+
+menu clear
+menu title %(distroname)s
+menu width 78
+menu margin 4
+menu rows 7
+menu vshift 10
+menu tabmsgrow 14
+menu cmdlinerow 14
+menu helpmsgrow 16
+menu helpmsgendrow 29
+
+# Refer to http://syslinux.zytor.com/wiki/index.php/Doc/menu
+
+menu color border * #00000000 #00000000 none
+menu color sel 0 #ff3a6496 #00000000 none
+menu color title 0 #ff7ba3d0 #00000000 none
+menu color tabmsg 0 #ff3a6496 #00000000 none
+menu color unsel 0 #ff347ead #00000000 none
+menu color hotsel 0 #ff64b0ea #00000000 none
+menu color hotkey 0 #ffffffff #00000000 none
+menu color help 0 #993677bc #00000000 none
+menu color scrollbar 0 #ffffffff #ff355594 none
+menu color timeout 0 #ff999999 #00000000 none
+menu color timeout_msg 0 #ff444b54 #00000000 none
+menu color cmdmark 0 #844bb2e5 #00000000 none
+menu color cmdline 0 #ffffffff #00000000 none
+
+menu tabmsg Press Tab for full configuration options on menu items.
+menu separator
+menu separator
+
 """ % args
 
     def __get_image_stanza(self, is_xen, **args):
@@ -450,7 +476,7 @@ menu color cmdline 0 #ffffffff #00000000
                     },
                     "verify": {
                         "short": "check",
-                        "long": "Verify and",
+                        "long": "^Test this media and start %s" % self.distro_name,
                         "extra": "check"
                     }
                    }
@@ -476,11 +502,11 @@ menu color cmdline 0 #ffffffff #00000000
             default = self.__is_default_kernel(kernel, kernels)
 
             if default:
-                long = "Boot %s" % self.distro_name
+                long = "Start %s" % self.distro_name
             elif kernel.startswith("kernel-"):
-                long = "Boot %s(%s)" % (self.name, kernel[7:])
+                long = "Start %s(%s)" % (self.name, kernel[7:])
             else:
-                long = "Boot %s(%s)" % (self.name, kernel)
+                long = "Start %s(%s)" % (self.name, kernel)
 
             oldmenus["verify"]["long"] = "%s %s" % (oldmenus["verify"]["long"],
                                                     long)
@@ -555,14 +581,25 @@ menu color cmdline 0 #ffffffff #00000000
         shutil.copyfile(memtest[0], isodir + "/isolinux/memtest")
 
         return """label memtest
-  menu label Memory Test
+  menu label Run a ^memory test
+  text help
+    If your system is having issues, an problem with your
+    system's memory may be the cause. Use this utility to
+    see if the memory is working correctly.
+  endtext
   kernel memtest
 """
 
     def __get_local_stanza(self, isodir):
         return """label local
-  menu label Boot from local drive
+  menu label Boot from ^local drive
   localboot 0xffff
+"""
+
+    def __get_returntomain_stanza(self, isodir):
+        return """label returntomain
+  menu label Return to ^main menu
+  menu exit
 """
 
     def _configure_syslinux_bootloader(self, isodir):
@@ -587,6 +624,7 @@ menu color cmdline 0 #ffffffff #00000000
         cfg += self.__get_image_stanzas(isodir)
         cfg += self.__get_memtest_stanza(isodir)
         cfg += self.__get_local_stanza(isodir)
+        cfg += self.__get_returntomain_stanza(isodir)
         cfg += self._get_isolinux_stanzas(isodir)
 
         cfgf = open(isodir + "/isolinux/isolinux.cfg", "w")
