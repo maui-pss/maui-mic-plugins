@@ -134,7 +134,7 @@ class LiveImageCreatorBase(LoopImageCreator):
         """
 
         if self.ks is None:
-            r = "ro liveimg"
+            r = "ro quiet rd.live.image rd.luks=0 rd.md=0 rd.dm=0"
         else:
             r = kickstart.get_kernel_args(self.ks)
 
