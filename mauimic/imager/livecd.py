@@ -138,10 +138,9 @@ class LiveImageCreatorBase(LoopImageCreator):
         else:
             r = kickstart.get_kernel_args(self.ks)
 
-        if os.path.exists(self._instroot + "/usr/bin/rhgb") or \
-           os.path.exists(self._instroot + "/usr/bin/plymouth") and \
-           ' rhgb' not in r:
-            r += ' rhgb'
+        if os.path.exists(self._instroot + "/usr/bin/plymouth") and \
+           ' splash' not in r:
+            r += ' splash'
 
         return r
 
