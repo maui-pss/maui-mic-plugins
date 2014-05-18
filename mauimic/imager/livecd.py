@@ -292,8 +292,7 @@ class x86LiveImageCreator(LiveImageCreatorBase):
                LiveImageCreatorBase._get_required_packages(self)
 
     def _get_isolinux_stanzas(self, isodir):
-        return """menu end
-"""
+        return ""
 
     def __find_syslinux_menu(self):
         for menu in ["vesamenu.c32", "menu.c32"]:
@@ -502,11 +501,11 @@ menu separator
             default = self.__is_default_kernel(kernel, kernels)
 
             if default:
-                long = "Start %s" % self.distro_name
+                long = "^Start %s" % self.distro_name
             elif kernel.startswith("kernel-"):
-                long = "Start %s(%s)" % (self.name, kernel[7:])
+                long = "^Start %s(%s)" % (self.name, kernel[7:])
             else:
-                long = "Start %s(%s)" % (self.name, kernel)
+                long = "^Start %s(%s)" % (self.name, kernel)
 
             oldmenus["verify"]["long"] = "%s %s" % (oldmenus["verify"]["long"],
                                                     long)
@@ -573,6 +572,14 @@ menu separator
 
         return cfg
 
+    def __get_separator_stanza(self, isodir):
+        return "menu separator\n"
+
+    def __get_troubleshooting_stanza(self, isodir):
+        return """menu begin ^Troubleshooting
+  menu title Troubleshooting
+"""
+
     def __get_memtest_stanza(self, isodir):
         memtest = glob.glob(self._instroot + "/boot/memtest86*")
         if not memtest:
@@ -602,6 +609,9 @@ menu separator
   menu exit
 """
 
+    def __get_menuend_stanza(self, isodir):
+        return "menu end\n"
+
     def _configure_syslinux_bootloader(self, isodir):
         """configure the boot loader"""
         fs_related.makedirs(isodir + "/isolinux")
@@ -622,10 +632,14 @@ menu separator
                                                distroname = self.distro_name)
 
         cfg += self.__get_image_stanzas(isodir)
-        cfg += self.__get_memtest_stanza(isodir)
-        cfg += self.__get_local_stanza(isodir)
-        cfg += self.__get_returntomain_stanza(isodir)
+        #cfg += self.__get_separator_stanza(isodir)
+        #cfg += self.__get_troubleshooting_stanza(isodir)
+        #cfg += self.__get_memtest_stanza(isodir)
+        #cfg += self.__get_local_stanza(isodir)
+        #cfg += self.__get_separator_stanza(isodir)
+        #cfg += self.__get_returntomain_stanza(isodir)
         cfg += self._get_isolinux_stanzas(isodir)
+        #cfg += self.__get_menuend_stanza(isodir)
 
         cfgf = open(isodir + "/isolinux/isolinux.cfg", "w")
         cfgf.write(cfg)
