@@ -725,7 +725,7 @@ hiddenmenu
             raise CreatorError("dracut not found on the image!")
 
         kernelver = self._get_kernel_versions().values()[0][0]
-        dracut_modules = "dmsquash-live pollcdrom drm" #systemd systemd-bootchart
+        dracut_modules = "dmsquash-live pollcdrom drm systemd systemd-bootchart"
         dracut_drivers = "sr_mod sd_mod ide-cd cdrom ehci_hcd uhci_hcd ohci_hcd usb_storage usbhid"
         initramfs_path = "/boot/initrd-%s.img" %(kernelver,)
 
