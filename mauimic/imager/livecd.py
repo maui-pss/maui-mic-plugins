@@ -691,12 +691,12 @@ hiddenmenu
         dracut_drivers = "sr_mod sd_mod ide-cd cdrom ehci_hcd uhci_hcd ohci_hcd usb_storage usbhid"
         initramfs_path = "/boot/initrd-%s.img" %(kernelver,)
 
-        args = [dracut_path, "-f", "-N", initramfs_path]
-        args.append("--add")
-        args += dracut_modules.split(" ")
-        args.append("--add-drivers")
-        args += dracut_drivers.split(" ")
-        args.append(kernelver)
+        args = [
+            dracut_path, "-f", "-N", initramfs_path,
+            "--add", dracut_modules,
+            "--add-drivers", dracut_drivers,
+            kernelver
+        ]
 
         import subprocess
         subprocess.call(args, preexec_fn = self._chroot)
