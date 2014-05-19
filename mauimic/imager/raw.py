@@ -1,6 +1,7 @@
 #!/usr/bin/python -tt
 #
 # Copyright (c) 2011 Intel, Inc.
+# Copyright (c) 2014 Pier Luigi Fiorini
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the Free
@@ -25,8 +26,8 @@ from mic import kickstart, msger
 from mic.utils import fs_related, runner, misc
 from mic.utils.partitionedfs import PartitionedMount
 from mic.utils.errors import CreatorError, MountError
+from mic.imager.baseimager import BaseImageCreator
 
-from baseimager import BaseImageCreator
 class RawImageCreator(BaseImageCreator):
     """Installs a system into a file containing a partitioned disk image.
 
@@ -102,20 +103,20 @@ class RawImageCreator(BaseImageCreator):
         s += "sysfs      /sys      sysfs   defaults         0 0\n"
         return s
 
-    def _create_mkinitrd_config(self):
-        """write to tell which modules to be included in initrd"""
+    def _create_dracut_config(self):
+        """write to tell which modules to be included in initramfs"""
 
-        mkinitrd = ""
-        mkinitrd += "PROBE=\"no\"\n"
-        mkinitrd += "MODULES+=\"ext3 ata_piix sd_mod libata scsi_mod\"\n"
-        mkinitrd += "rootfs=\"ext3\"\n"
-        mkinitrd += "rootopts=\"defaults\"\n"
+        dracut = """
+add_drivers+="ata_piix sd_mod libata scsi_mod"
+filesystems+="ext3"
+hostonly+="no"
+"""
 
-        msger.debug("Writing mkinitrd config %s/etc/sysconfig/mkinitrd" \
+        msger.debug("Writing dracut config %s/etc/dracut.conf.d/mic.conf" \
                     % self._instroot)
-        os.makedirs(self._instroot + "/etc/sysconfig/",mode=644)
-        cfg = open(self._instroot + "/etc/sysconfig/mkinitrd", "w")
-        cfg.write(mkinitrd)
+        os.makedirs(self._instroot + "/etc/dracut.conf.d/",mode=644)
+        cfg = open(self._instroot + "/etc/dracut.conf.d/mic.conf", "w")
+        cfg.write(dracut)
         cfg.close()
 
     def _get_parts(self):
@@ -208,7 +209,7 @@ class RawImageCreator(BaseImageCreator):
                                           align = p.align)
 
         self.__instloop.mount()
-        self._create_mkinitrd_config()
+        self._create_dracut_config()
 
     def _get_required_packages(self):
         required_packages = BaseImageCreator._get_required_packages(self)
