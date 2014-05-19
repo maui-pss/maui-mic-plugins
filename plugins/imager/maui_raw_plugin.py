@@ -2,7 +2,8 @@
 #
 # Copyright (c) 2011 Intel, Inc.
 # Copyright (c) 2012 Jolla Ltd.
-# Contact: Islam Amer <islam.amer@jollamobile.com>
+# Copyright (c) 2014 Pier Luigi Fiorini
+# Contact: Pier Luigi Fiorini <pierluigi.fiorini@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the Free
@@ -28,11 +29,11 @@ from mic.conf import configmgr
 from mic.plugin import pluginmgr
 from mic.utils.partitionedfs import PartitionedMount
 
-import mic.imager.raw as raw
-
+import mauimic.imager.raw as raw
 from mic.pluginbase import ImagerPlugin
+
 class RawPlugin(ImagerPlugin):
-    name = 'raw'
+    name = 'maui_raw'
 
     @classmethod
     @cmdln.option("--compress-disk-image", dest="compress_image", type='choice',
