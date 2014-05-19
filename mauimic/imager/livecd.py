@@ -133,10 +133,12 @@ class LiveImageCreatorBase(LoopImageCreator):
             A sensible default implementation is provided.
         """
 
+        default = "ro quiet rd.live.image rd.luks=0 rd.md=0 rd.dm=0"
+
         if self.ks is None:
-            r = "ro quiet rd.live.image rd.luks=0 rd.md=0 rd.dm=0"
+            r = default
         else:
-            r = kickstart.get_kernel_args(self.ks)
+            r = kickstart.get_kernel_args(self.ks, default)
 
         if (os.path.exists(self._instroot + "/usr/bin/plymouth") or \
             os.path.exists(self._instroot + "/usr/bin/ply-image")) and \
