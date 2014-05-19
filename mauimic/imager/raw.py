@@ -60,6 +60,9 @@ class RawImageCreator(BaseImageCreator):
 
         self._dep_checks.extend(["sync", "kpartx", "parted", "extlinux"])
 
+        # Force distro name to Maui
+        self.distro_name = "Maui"
+
     def configure(self, repodata = None):
         import subprocess
         def chroot():
@@ -266,7 +269,7 @@ hostonly+="no"
         syslinux_conf += "menu hidden\n"
         syslinux_conf += "\n"
         syslinux_conf += "%s\n" % splashline
-        syslinux_conf += "menu title Welcome to %s!\n" % self.distro_name
+        syslinux_conf += "menu title %s!\n" % self.distro_name
         syslinux_conf += "menu color border 0 #ffffffff #00000000\n"
         syslinux_conf += "menu color sel 7 #ffffffff #ff000000\n"
         syslinux_conf += "menu color title 0 #ffffffff #00000000\n"
