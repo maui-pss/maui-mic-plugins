@@ -3,7 +3,7 @@
 # Copyright (c) 2011 Intel, Inc.
 # Copyright (c) 2012 Jolla Ltd.
 # Copyright (c) 2014 Pier Luigi Fiorini
-# Contact: Islam Amer <islam.amer@jollamobile.com>
+# Contact: Pier Luigi Fiorini <pierluigi.fiorini@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the Free
