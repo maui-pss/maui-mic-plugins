@@ -109,7 +109,7 @@ class RawImageCreator(BaseImageCreator):
     def _create_dracut_config(self):
         """write to tell which modules to be included in initramfs"""
 
-        dracut = """
+        dracut = """add_dracutmodules+="drm systemd systemd-bootchart"
 add_drivers+="ata_piix sd_mod libata scsi_mod"
 filesystems+="ext3"
 hostonly+="no"
