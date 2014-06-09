@@ -328,13 +328,16 @@ class x86LiveImageCreator(LiveImageCreatorBase):
             shutil.copy(path, isodir + "/isolinux/")
 
     def __copy_syslinux_background(self, isodest):
-        background_path = self._instroot + \
-                          "/usr/lib/anaconda-runtime/syslinux-vesa-splash.jpg"
+        found = False
+        for ext in ("jpg", "png"):
+            background_path = self._instroot + \
+                              "/usr/lib/anaconda-runtime/syslinux-vesa-splash." + ext
+            if os.path.exists(background_path):
+                found = True
+                shutil.copyfile(background_path, isodest)
 
-        if not os.path.exists(background_path):
+        if not found:
             return False
-
-        shutil.copyfile(background_path, isodest)
 
         return True
 
@@ -624,8 +627,10 @@ menu separator
                                    self.__find_syslinux_mboot())
 
         background = ""
-        if self.__copy_syslinux_background(isodir + "/isolinux/splash.jpg"):
-            background = "menu background splash.jpg"
+        for ext in ("png", "jpg"):
+            if self.__copy_syslinux_background(isodir + "/isolinux/splash." + ext):
+                background = "menu background splash." + ext
+                break
 
         cfg = self.__get_basic_syslinux_config(menu = menu,
                                                background = background,
