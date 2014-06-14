@@ -132,7 +132,7 @@ class LiveCDPlugin(ImagerPlugin):
             dracut_modules = "dmsquash-live pollcdrom drm" #systemd systemd-bootchart
             dracut_drivers = "sr_mod sd_mod ide-cd cdrom ehci_hcd uhci_hcd ohci_hcd usb_storage usbhid"
             args = [
-                "/usr/bin/dracut", "-f", "-N", "/boot/initrd-%s.img" % kernelver,
+                "/usr/bin/dracut", "-q", "-f", "-N", "/boot/initrd-%s.img" % kernelver,
                 "--add", dracut_modules.split(" "),
                 "--add-drivers", dracut_drivers.split(" "),
                 kernelver
