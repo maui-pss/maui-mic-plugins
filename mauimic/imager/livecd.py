@@ -2,6 +2,7 @@
 #
 # Copyright (c) 2014 Pier Luigi Fiorini
 # Copyright (c) 2011 Intel, Inc.
+# Copyright (c) 2007-2012, Red Hat, Inc.
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the Free
@@ -175,8 +176,12 @@ class LiveImageCreatorBase(LoopImageCreator):
 
     def _mount_instroot(self, base_on = None):
         LoopImageCreator._mount_instroot(self, base_on)
+        self.__write_initrd_conf(self._instroot + "/etc/sysconfig/mkinitrd")
+        self.__write_dracut_conf(self._instroot + "/etc/dracut.conf.d/02livecd.conf")
 
     def _unmount_instroot(self):
+        self.__restore_file(self._instroot + "/etc/sysconfig/mkinitrd")
+        self.__restore_file(self._instroot + "/etc/dracut.conf.d/02livecd.conf")
         LoopImageCreator._unmount_instroot(self)
 
     def __ensure_isodir(self):
@@ -201,6 +206,55 @@ class LiveImageCreatorBase(LoopImageCreator):
             env["LIVE_ROOT"] = self.__ensure_isodir()
 
         return env
+
+    def __extra_filesystems(self):
+        return "vfat msdos isofs ext3 ext4 xfs btrfs"
+
+    def __extra_drivers(self):
+        retval = "sr_mod sd_mod ide-cd cdrom "
+        for module in self.__modules:
+            if module == "=usb":
+                retval = retval + "ehci_hcd uhci_hcd ohci_hcd "
+                retval = retval + "usb_storage usbhid "
+            elif module == "=firewire":
+                retval = retval + "firewire-sbp2 firewire-ohci "
+                retval = retval + "sbp2 ohci1394 ieee1394 "
+            elif module == "=mmc":
+                retval = retval + "mmc_block sdhci sdhci-pci "
+            elif module == "=pcmcia":
+                retval = retval + "pata_pcmcia "
+            else:
+                retval = retval + module + " "
+        return retval
+
+    def __restore_file(self,path):
+        try:
+            os.unlink(path)
+        except:
+            pass
+        if os.path.exists(path + '.rpmnew'):
+            os.rename(path + '.rpmnew', path)
+
+    def __write_initrd_conf(self, path):
+        if not os.path.exists(os.path.dirname(path)):
+            makedirs(os.path.dirname(path))
+        f = open(path, "a")
+        f.write('LIVEOS="yes"\n')
+        f.write('PROBE="no"\n')
+        f.write('MODULES+="' + self.__extra_filesystems() + '"\n')
+        f.write('MODULES+="' + self.__extra_drivers() + '"\n')
+        f.close()
+
+    def __write_dracut_conf(self, path):
+        if not os.path.exists(os.path.dirname(path)):
+            makedirs(os.path.dirname(path))
+        f = open(path, "a")
+        f.write('filesystems+="' + self.__extra_filesystems() + ' "\n')
+        f.write('drivers+="' + self.__extra_drivers() + ' "\n')
+        f.write('add_dracutmodules+=" dmsquash-live pollcdrom "\n')
+        f.write('hostonly="no"\n')
+        f.write('dracut_rescue_image="no"\n')
+        f.close()
 
     def __create_iso(self, isodir):
         iso = self._outdir + "/" + self.name + ".iso"
@@ -741,19 +795,18 @@ hiddenmenu
                 isodir + "/EFI/boot/boot%s.conf" %(efiname,))
 
     def _create_initramfs(self):
+        self._create_dracut_config()
+
         dracut_path = "/usr/bin/dracut"
         if not os.path.exists(self._instroot + dracut_path):
             raise CreatorError("dracut not found on the image!")
 
         kernelver = self._get_kernel_versions().values()[0][0]
-        dracut_modules = "dmsquash-live pollcdrom drm systemd systemd-bootchart"
-        dracut_drivers = "sr_mod sd_mod ide-cd cdrom ehci_hcd uhci_hcd ohci_hcd usb_storage usbhid"
         initramfs_path = "/boot/initrd-%s.img" %(kernelver,)
 
         args = [
-            dracut_path, "-q", "-f", "-N", initramfs_path,
-            "--add", dracut_modules,
-            "--add-drivers", dracut_drivers,
+            dracut_path, "-q", "-f", "-N",
+            initramfs_path,
             "--lz4",
             kernelver
         ]
