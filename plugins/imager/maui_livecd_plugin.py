@@ -129,7 +129,7 @@ class LiveCDPlugin(ImagerPlugin):
 
         def __mkinitrd(instance):
             kernelver = instance._get_kernel_versions().values()[0][0]
-            dracut_modules = "dmsquash-live pollcdrom drm" #systemd systemd-bootchart
+            dracut_modules = "dmsquash-live pollcdrom drm systemd systemd-bootchart"
             dracut_drivers = "sr_mod sd_mod ide-cd cdrom ehci_hcd uhci_hcd ohci_hcd usb_storage usbhid"
             args = [
                 "/usr/bin/dracut", "-q", "-f", "-N", "/boot/initrd-%s.img" % kernelver,
