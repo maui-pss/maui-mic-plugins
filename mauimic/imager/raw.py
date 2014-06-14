@@ -106,22 +106,6 @@ class RawImageCreator(BaseImageCreator):
         s += "sysfs      /sys      sysfs   defaults         0 0\n"
         return s
 
-    def _create_dracut_config(self):
-        """write to tell which modules to be included in initramfs"""
-
-        dracut = """add_dracutmodules+="drm systemd systemd-bootchart"
-add_drivers+="ata_piix sd_mod libata scsi_mod"
-filesystems+="ext3"
-hostonly+="no"
-"""
-
-        msger.debug("Writing dracut config %s/etc/dracut.conf.d/mic.conf" \
-                    % self._instroot)
-        os.makedirs(self._instroot + "/etc/dracut.conf.d/",mode=644)
-        cfg = open(self._instroot + "/etc/dracut.conf.d/mic.conf", "w")
-        cfg.write(dracut)
-        cfg.close()
-
     def _get_parts(self):
         if not self.ks:
             raise CreatorError("Failed to get partition info, "
@@ -212,7 +196,8 @@ hostonly+="no"
                                           align = p.align)
 
         self.__instloop.mount()
-        self._create_dracut_config()
+        self.__write_initrd_conf(self._instroot + "/etc/sysconfig/mkinitrd")
+        self.__write_dracut_conf(self._instroot + "/etc/dracut.conf.d/02vm.conf")
 
     def _get_required_packages(self):
         required_packages = BaseImageCreator._get_required_packages(self)
@@ -374,6 +359,8 @@ hostonly+="no"
             self._install_syslinux()
 
     def _unmount_instroot(self):
+        self.__restore_file(self._instroot + "/etc/sysconfig/mkinitrd")
+        self.__restore_file(self._instroot + "/etc/dracut.conf.d/02livecd.conf")
         if not self.__instloop is None:
             self.__instloop.cleanup()
 
@@ -507,3 +494,52 @@ hostonly+="no"
         cfg = open("%s/%s.xml" % (self._outdir, self.name), "w")
         cfg.write(xml)
         cfg.close()
+
+    def __extra_filesystems(self):
+        return "vfat msdos isofs ext3 ext4 xfs btrfs"
+
+    def __extra_drivers(self):
+        retval = "sr_mod sd_mod ide-cd cdrom "
+        for module in self.__modules:
+            if module == "=usb":
+                retval = retval + "ehci_hcd uhci_hcd ohci_hcd "
+                retval = retval + "usb_storage usbhid "
+            elif module == "=firewire":
+                retval = retval + "firewire-sbp2 firewire-ohci "
+                retval = retval + "sbp2 ohci1394 ieee1394 "
+            elif module == "=mmc":
+                retval = retval + "mmc_block sdhci sdhci-pci "
+            elif module == "=pcmcia":
+                retval = retval + "pata_pcmcia "
+            else:
+                retval = retval + module + " "
+        return retval
+
+    def __restore_file(self,path):
+        try:
+            os.unlink(path)
+        except:
+            pass
+        if os.path.exists(path + '.rpmnew'):
+            os.rename(path + '.rpmnew', path)
+
+    def __write_initrd_conf(self, path):
+        if not os.path.exists(os.path.dirname(path)):
+            makedirs(os.path.dirname(path))
+        f = open(path, "a")
+        f.write('LIVEOS="yes"\n')
+        f.write('PROBE="no"\n')
+        f.write('MODULES+="' + self.__extra_filesystems() + '"\n')
+        f.write('MODULES+="' + self.__extra_drivers() + '"\n')
+        f.close()
+
+    def __write_dracut_conf(self, path):
+        if not os.path.exists(os.path.dirname(path)):
+            makedirs(os.path.dirname(path))
+        f = open(path, "a")
+        f.write('filesystems+="' + self.__extra_filesystems() + ' "\n')
+        f.write('drivers+="' + self.__extra_drivers() + ' "\n')
+        f.write('add_dracutmodules+=" dmsquash-live pollcdrom "\n')
+        f.write('hostonly="no"\n')
+        f.write('dracut_rescue_image="no"\n')
+        f.close()
