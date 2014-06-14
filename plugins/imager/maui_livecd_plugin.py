@@ -135,6 +135,7 @@ class LiveCDPlugin(ImagerPlugin):
                 "/usr/bin/dracut", "-q", "-f", "-N", "/boot/initrd-%s.img" % kernelver,
                 "--add", dracut_modules.split(" "),
                 "--add-drivers", dracut_drivers.split(" "),
+                "--lz4",
                 kernelver
             ]
             try:
