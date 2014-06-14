@@ -754,6 +754,7 @@ hiddenmenu
             dracut_path, "-q", "-f", "-N", initramfs_path,
             "--add", dracut_modules,
             "--add-drivers", dracut_drivers,
+            "--lz4",
             kernelver
         ]
 
