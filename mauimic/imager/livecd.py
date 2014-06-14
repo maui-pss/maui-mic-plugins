@@ -751,7 +751,7 @@ hiddenmenu
         initramfs_path = "/boot/initrd-%s.img" %(kernelver,)
 
         args = [
-            dracut_path, "-f", "-N", initramfs_path,
+            dracut_path, "-q", "-f", "-N", initramfs_path,
             "--add", dracut_modules,
             "--add-drivers", dracut_drivers,
             kernelver
