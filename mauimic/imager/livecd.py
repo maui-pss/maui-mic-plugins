@@ -336,6 +336,10 @@ class LiveImageCreatorBase(LoopImageCreator):
 
 class x86LiveImageCreator(LiveImageCreatorBase):
     """ImageCreator for x86 machines"""
+    def __init__(self, *args, **kwargs):
+        LiveImageCreatorBase.__init__(self, *args, **kwargs)
+        self._efiarch = None
+
     def _get_mkisofs_options(self, isodir):
         return [ "-b", "isolinux/isolinux.bin",
                  "-c", "isolinux/boot.cat",
@@ -643,29 +647,74 @@ menu end
         cfgf.write(cfg)
         cfgf.close()
 
-    def __copy_efi_files(self, isodir):
-        if not os.path.exists(self._instroot + "/boot/efi/EFI/redhat/grub.efi"):
-            return False
-        shutil.copy(self._instroot + "/boot/efi/EFI/redhat/grub.efi",
-                    isodir + "/EFI/boot/grub.efi")
-        shutil.copy(self._instroot + "/boot/grub/splash.xpm.gz",
-                    isodir + "/EFI/boot/splash.xpm.gz")
+    @property
+    def efiarch(self):
+        if not self._efiarch:
+            # for most things, we want them named boot$efiarch
+            efiarch = {"i386": "IA32", "x86_64": "X64"}
+            self._efiarch = efiarch[rpmmisc.getBaseArch()]
+        return self._efiarch
 
-        return True
+    def __copy_efi_files(self, isodir):
+        """ Copy the efi files into /EFI/BOOT/
+            If any of them are missing, return False.
+            requires:
+              shim.efi
+              gcdx64.efi
+              fonts/unicode.pf2
+        """
+        fail = False
+        missing = []
+        files = [("/boot/efi/EFI/*/shim.efi", "/EFI/BOOT/BOOT%s.efi" % (self.efiarch,)),
+                 ("/boot/efi/EFI/*/gcdx64.efi", "/EFI/BOOT/grubx64.efi"),
+                 ("/boot/efi/EFI/*/fonts/unicode.pf2", "/EFI/BOOT/fonts/"),
+                ]
+        makedirs(isodir+"/EFI/BOOT/fonts/")
+        for src, dest in files:
+            src_glob = glob.glob(self._instroot + src)
+            if not src_glob:
+                missing.append("Missing EFI file (%s)" % (src,))
+                fail = True
+            else:
+                shutil.copy(src_glob[0], isodir+dest)
+        map(msger.error, missing)
+        return fail
 
     def __get_basic_efi_config(self, **args):
         return """
-default=0
-splashimage=/EFI/boot/splash.xpm.gz
-timeout %(timeout)d
-hiddenmenu
+set default="1"
 
+function load_video {
+  insmod efi_gop
+  insmod efi_uga
+  insmod video_bochs
+  insmod video_cirrus
+  insmod all_video
+}
+
+load_video
+set gfxpayload=keep
+insmod gzio
+insmod part_gpt
+insmod ext2
+
+set timeout=%(timeout)d
+### END /etc/grub.d/00_header ###
+
+search --no-floppy --set=root -l '%(isolabel)s'
+
+### BEGIN /etc/grub.d/10_linux ###
 """ %args
 
     def __get_efi_image_stanza(self, **args):
-        return """title %(long)s
-  kernel /EFI/boot/vmlinuz%(index)s root=live:CDLABEL=%(fslabel)s rootfstype=auto %(liveargs)s %(extra)s
-  initrd /EFI/boot/initrd%(index)s.img
+        if self._isDracut:
+            args["rootlabel"] = "live:LABEL=%(fslabel)s" % args
+        else:
+            args["rootlabel"] = "CDLABEL=%(fslabel)s" % args
+        return """menuentry '%(long)s' --class fedora --class gnu-linux --class gnu --class os {
+	linuxefi /isolinux/vmlinuz%(index)s root=%(rootlabel)s %(liveargs)s %(extra)s
+	initrdefi /isolinux/initrd%(index)s.img
+}
 """ %args
 
     def __get_efi_image_stanzas(self, isodir, name):
@@ -678,62 +727,56 @@ hiddenmenu
 
         for index in range(0, 9):
             # we don't support xen kernels
-            if os.path.exists("%s/EFI/boot/xen%d.gz" %(isodir, index)):
+            if os.path.exists("%s/EFI/BOOT/xen%d.gz" %(isodir, index)):
                 continue
             cfg += self.__get_efi_image_stanza(fslabel = self.fslabel,
                                                liveargs = kernel_options,
-                                               long = name,
+                                               long = "Start " + self.product,
                                                extra = "", index = index)
             if checkisomd5:
-                cfg += self.__get_efi_image_stanza(
-                                               fslabel = self.fslabel,
+                cfg += self.__get_efi_image_stanza(fslabel = self.fslabel,
+                                                   liveargs = kernel_options,
+                                                   long = "Test this media & start " + self.product,
+                                                   extra = "rd.live.check",
+                                                   index = index)
+            cfg += """
+submenu 'Troubleshooting -->' {
+"""
+            cfg += self.__get_efi_image_stanza(fslabel = self.fslabel,
                                                liveargs = kernel_options,
-                                               long = "Verify and Boot " + name,
-                                               extra = "check",
-                                               index = index)
+                                               long = "Start " + self.product + " in basic graphics mode",
+                                               extra = "nomodeset", index = index)
+
+            cfg+= """}
+"""
             break
 
         return cfg
 
     def _configure_efi_bootloader(self, isodir):
         """Set up the configuration for an EFI bootloader"""
-        fs_related.makedirs(isodir + "/EFI/boot")
-
-        if not self.__copy_efi_files(isodir):
+        if self.__copy_efi_files(isodir):
             shutil.rmtree(isodir + "/EFI")
+            msger.warning("Failed to copy EFI files, no EFI Support will be included.")
             return
 
-        for f in os.listdir(isodir + "/isolinux"):
-            os.link("%s/isolinux/%s" %(isodir, f),
-                    "%s/EFI/boot/%s" %(isodir, f))
-
-
-        cfg = self.__get_basic_efi_config(name = self.name,
+        cfg = self.__get_basic_efi_config(isolabel = self.fslabel,
                                           timeout = self._timeout)
         cfg += self.__get_efi_image_stanzas(isodir, self.name)
 
-        cfgf = open(isodir + "/EFI/boot/grub.conf", "w")
+        cfgf = open(isodir + "/EFI/BOOT/grub.cfg", "w")
         cfgf.write(cfg)
         cfgf.close()
 
         # first gen mactel machines get the bootloader name wrong apparently
-        if rpmmisc.getBaseArch() == "i386":
-            os.link(isodir + "/EFI/boot/grub.efi",
-                    isodir + "/EFI/boot/boot.efi")
-            os.link(isodir + "/EFI/boot/grub.conf",
-                    isodir + "/EFI/boot/boot.conf")
-
-        # for most things, we want them named boot$efiarch
-        efiarch = {"i386": "ia32", "x86_64": "x64"}
-        efiname = efiarch[rpmmisc.getBaseArch()]
-        os.rename(isodir + "/EFI/boot/grub.efi",
-                  isodir + "/EFI/boot/boot%s.efi" %(efiname,))
-        os.link(isodir + "/EFI/boot/grub.conf",
-                isodir + "/EFI/boot/boot%s.conf" %(efiname,))
+        if rpmUtils.arch.getBaseArch() == "i386":
+            os.link(isodir + "/EFI/BOOT/BOOT%s.efi" % (self.efiarch),
+                    isodir + "/EFI/BOOT/BOOT.efi")
 
     def _configure_bootloader(self, isodir):
         self._configure_syslinux_bootloader(isodir)
-        self._configure_efi_bootloader(isodir)
+        # TODO: Enable EFI configuration when we actually have grub2
+        #self._configure_efi_bootloader(isodir)
 
 arch = rpmmisc.getBaseArch()
 if arch in ("i386", "x86_64"):
