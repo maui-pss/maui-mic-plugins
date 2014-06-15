@@ -36,7 +36,8 @@ class LiveImageCreatorBase(LoopImageCreator):
         bootloader, bootloader configuration, kernel and initramfs.
     """
 
-    def __init__(self, creatoropts = None, pkgmgr = None):
+    def __init__(self, creatoropts=None, pkgmgr=None,
+                 title="Linux", product="Linux"):
         """Initialise a LiveImageCreator instance.
 
            This method takes the same arguments as ImageCreator.__init__().
@@ -98,8 +99,11 @@ class LiveImageCreatorBase(LoopImageCreator):
                                  "dd",
                                  "genisoimage"])
 
-        # Force distro name to Maui
-        self.distro_name = "Maui"
+        self._isofstype = "iso9660"
+        self.base_on = False
+
+        self.title = title
+        self.product = product
 
     #
     # Hooks for subclasses
@@ -466,93 +470,47 @@ menu color cmdmark 0 #844bb2e5 #00000000 none
 menu color cmdline 0 #ffffffff #00000000 none
 
 menu tabmsg Press Tab for full configuration options on menu items.
-menu separator
-menu separator
-
 """ % args
 
     def __get_image_stanza(self, is_xen, isDracut, **args):
+        if isDracut:
+            args["rootlabel"] = "live:CDLABEL=%(fslabel)s" % args
+        else:
+            args["rootlabel"] = "CDLABEL=%(fslabel)s" % args
+
         if not is_xen:
             template = """label %(short)s
   menu label %(long)s
   kernel vmlinuz%(index)s
-  append initrd=initrd%(index)s.img root=live:CDLABEL=%(fslabel)s rootfstype=auto %(liveargs)s %(extra)s
+  append initrd=initrd%(index)s.img root=%(rootlabel)s rootfstype=%(isofstype)s %(liveargs)s %(extra)s
 """
         else:
             template = """label %(short)s
   menu label %(long)s
   kernel mboot.c32
-  append xen%(index)s.gz --- vmlinuz%(index)s root=live:CDLABEL=%(fslabel)s rootfstype=auto %(liveargs)s %(extra)s --- initrd%(index)s.img
+  append xen%(index)s.gz --- vmlinuz%(index)s root=%(rootlabel)s rootfstype=%(isofstype)s %(liveargs)s %(extra)s --- initrd%(index)s.img
 """
+
+        if args.get("help"):
+            template += """  text help
+      %(help)s
+  endtext
+"""
+
         return template % args
 
     def __get_image_stanzas(self, isodir):
-        versions = []
         kernels = self._get_kernel_versions()
-        for kernel in kernels:
-            for version in kernels[kernel]:
-                versions.append(version)
-
-        if not versions:
-            raise CreatorError("Unable to find valid kernels, "
-                               "please check the repo")
-
         kernel_options = self._get_kernel_options()
+        checkisomd5 = self._has_checkisomd5()
 
-        """ menu can be customized highly, the format is:
+        # Stanzas for insertion into the config template
+        linux = []
+        basic = []
+        check = []
 
-          short_name1:long_name1:extra_opts1;short_name2:long_name2:extra_opts2
-
-        e.g.: autoinst:InstallationOnly:systemd.unit=installer-graphical.service
-        but in order to keep compatible with old format, these are still ok:
-
-              liveinst autoinst
-              liveinst;autoinst
-              liveinst::;autoinst::
-        """
-        oldmenus = {"basic": {
-                        "short": "basic",
-                        "long": "Installation Only (Text based)",
-                        "extra": "basic nosplash 4"
-                    },
-                    "liveinst": {
-                        "short": "liveinst",
-                        "long": "Installation Only",
-                        "extra": "liveinst nosplash 4"
-                    },
-                    "autoinst": {
-                        "short": "autoinst",
-                        "long": "Autoinstall (Deletes all existing content)",
-                        "extra": "autoinst nosplash 4"
-                    },
-                    "netinst": {
-                        "short": "netinst",
-                        "long": "Network Installation",
-                        "extra": "netinst 4"
-                    },
-                    "verify": {
-                        "short": "check",
-                        "long": "^Test this media and start %s" % self.distro_name,
-                        "extra": "check"
-                    }
-                   }
-        menu_options = self._get_menu_options()
-        menus = menu_options.split(";")
-        for i in range(len(menus)):
-            menus[i] = menus[i].split(":")
-        if len(menus) == 1 and len(menus[0]) == 1:
-            """ Keep compatible with the old usage way """
-            menus = menu_options.split()
-            for i in range(len(menus)):
-                menus[i] = [menus[i]]
-
-        cfg = ""
-
-        default_version = None
-        default_index = None
         index = "0"
-        netinst = None
-        for version in versions:
+        for kernel, version in ((k,v) for k in kernels for v in kernels[k]):
             (is_xen, isDracut) = self.__copy_kernel_and_initramfs(isodir, version, index)
             if index == "0":
                 self._isDracut = isDracut
@@ -560,84 +518,57 @@ menu separator
             default = self.__is_default_kernel(kernel, kernels)
 
             if default:
-                long = "^Start %s" % self.distro_name
+                long = self.product
             elif kernel.startswith("kernel-"):
-                long = "^Start %s(%s)" % (self.name, kernel[7:])
+                long = "%s (%s)" % (self.product, kernel[7:])
             else:
-                long = "^Start %s(%s)" % (self.name, kernel)
+                long = "%s (%s)" % (self.product, kernel)
 
-            oldmenus["verify"]["long"] = "%s %s" % (oldmenus["verify"]["long"],
-                                                    long)
+            # tell dracut not to ask for LUKS passwords or activate mdraid sets
+            if isDracut:
+                kern_opts = kernel_options + " rd.luks=0 rd.md=0 rd.dm=0"
+            else:
+                kern_opts = kernel_options
 
-            cfg += self.__get_image_stanza(is_xen, isDracut,
+            linux.append(self.__get_image_stanza(is_xen, isDracut,
                                            fslabel = self.fslabel,
-                                           liveargs = kernel_options,
-                                           long = long,
+                                           isofstype = "auto",
+                                           liveargs = kern_opts,
+                                           long = "^Start " + long,
                                            short = "linux" + index,
                                            extra = "",
-                                           index = index)
+                                           help = "",
+                                           index = index))
 
             if default:
-                cfg += "  menu default\n"
-                default_version = version
-                default_index = index
+                linux[-1] += "  menu default\n"
 
-            for menu in menus:
-                if not menu[0]:
-                    continue
-                short = menu[0] + index
+            basic.append(self.__get_image_stanza(is_xen, isDracut,
+                                           fslabel = self.fslabel,
+                                           isofstype = "auto",
+                                           liveargs = kern_opts,
+                                           long = "Start " + long + " in ^basic graphics mode.",
+                                           short = "basic" + index,
+                                           extra = "nomodeset",
+                                           help = "Try this option out if you're having trouble starting.",
+                                           index = index))
 
-                if len(menu) >= 2:
-                    long = menu[1]
-                else:
-                    if menu[0] in oldmenus.keys():
-                        if menu[0] == "verify" and not self._has_checkisomd5():
-                            continue
-                        if menu[0] == "netinst":
-                            netinst = oldmenus[menu[0]]
-                            continue
-                        long = oldmenus[menu[0]]["long"]
-                        extra = oldmenus[menu[0]]["extra"]
-                    else:
-                        long = short.upper() + " X" + index
-                        extra = ""
-
-                if len(menu) >= 3:
-                    extra = menu[2]
-
-                cfg += self.__get_image_stanza(is_xen, isDracut,
+            if checkisomd5:
+                check.append(self.__get_image_stanza(is_xen, isDracut,
                                                fslabel = self.fslabel,
-                                               liveargs = kernel_options,
-                                               long = long,
-                                               short = short,
-                                               extra = extra,
-                                               index = index)
+                                               isofstype = "auto",
+                                               liveargs = kern_opts,
+                                               long = "^Test this media & start " + long,
+                                               short = "check" + index,
+                                               extra = "rd.live.check",
+                                               help = "",
+                                               index = index))
+            else:
+                check.append(None)
 
             index = str(int(index) + 1)
 
-        if not default_version:
-            default_version = versions[0]
-        if not default_index:
-            default_index = "0"
-
-        if netinst:
-            cfg += self.__get_image_stanza(is_xen, isDracut,
-                                           fslabel = self.fslabel,
-                                           liveargs = kernel_options,
-                                           long = netinst["long"],
-                                           short = netinst["short"],
-                                           extra = netinst["extra"],
-                                           index = default_index)
-
-        return cfg
-
-    def __get_separator_stanza(self, isodir):
-        return "menu separator\n"
-
-    def __get_troubleshooting_stanza(self, isodir):
-        return """menu begin ^Troubleshooting
-  menu title Troubleshooting
-"""
+        return (linux, basic, check)
 
     def __get_memtest_stanza(self, isodir):
         memtest = glob.glob(self._instroot + "/boot/memtest86*")
@@ -662,45 +593,54 @@ menu separator
   localboot 0xffff
 """
 
-    def __get_returntomain_stanza(self, isodir):
-        return """label returntomain
-  menu label Return to ^main menu
-  menu exit
-"""
-
-    def __get_menuend_stanza(self, isodir):
-        return "menu end\n"
-
     def _configure_syslinux_bootloader(self, isodir):
         """configure the boot loader"""
-        fs_related.makedirs(isodir + "/isolinux")
+        makedirs(isodir + "/isolinux")
 
         menu = self.__find_syslinux_menu()
 
         self.__copy_syslinux_files(isodir, menu,
                                    self.__find_syslinux_mboot())
 
-        background = ""
-        background_path = self.__copy_syslinux_background(isodir + "/isolinux/splash.")
-        if background_path:
-                background = "menu background " + os.path.basename(background_path)
+        background = self.__copy_syslinux_background(isodir + "/isolinux/splash.")
+        if background:
+            background = os.path.basename(background)
+        else:
+            background = ""
 
         cfg = self.__get_basic_syslinux_config(menu = menu,
                                                background = background,
-                                               name = self.name,
-                                               timeout = self._timeout * 10,
-                                               distroname = self.distro_name)
+                                               title = self.title,
+                                               timeout = self._timeout * 10)
+        cfg += "menu separator\n"
 
-        cfg += self.__get_image_stanzas(isodir)
-        #cfg += self.__get_separator_stanza(isodir)
-        #cfg += self.__get_troubleshooting_stanza(isodir)
-        #cfg += self.__get_memtest_stanza(isodir)
-        #cfg += self.__get_local_stanza(isodir)
-        #cfg += self.__get_separator_stanza(isodir)
-        #cfg += self.__get_returntomain_stanza(isodir)
+        linux, basic, check = self.__get_image_stanzas(isodir)
+        # Add linux stanzas to main menu
+        for s in linux:
+            cfg += s
+        cfg += "menu separator\n"
+
+        cfg += """menu begin ^Troubleshooting
+  menu title Troubleshooting
+"""
+        # Add basic video and check to submenu
+        for b, c in zip(basic, check):
+            cfg += b
+            if c:
+                cfg += c
+
+        cfg += self.__get_memtest_stanza(isodir)
+        cfg += "menu separator\n"
+
+        cfg += self.__get_local_stanza(isodir)
         cfg += self._get_isolinux_stanzas(isodir)
-        #cfg += self.__get_menuend_stanza(isodir)
 
+        cfg += """menu separator
+label returntomain
+  menu label Return to ^main menu.
+  menu exit
+menu end
+"""
         cfgf = open(isodir + "/isolinux/isolinux.cfg", "w")
         cfgf.write(cfg)
         cfgf.close()
