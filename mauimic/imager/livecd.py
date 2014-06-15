@@ -731,28 +731,7 @@ hiddenmenu
         os.link(isodir + "/EFI/boot/grub.conf",
                 isodir + "/EFI/boot/boot%s.conf" %(efiname,))
 
-    def _create_initramfs(self):
-        self._create_dracut_config()
-
-        dracut_path = "/usr/bin/dracut"
-        if not os.path.exists(self._instroot + dracut_path):
-            raise CreatorError("dracut not found on the image!")
-
-        kernelver = self._get_kernel_versions().values()[0][0]
-        initramfs_path = "/boot/initrd-%s.img" %(kernelver,)
-
-        args = [
-            dracut_path, "-q", "-f", "-N",
-            initramfs_path,
-            "--lz4",
-            kernelver
-        ]
-
-        import subprocess
-        subprocess.call(args, preexec_fn = self._chroot)
-
     def _configure_bootloader(self, isodir):
-        self._create_initramfs()
         self._configure_syslinux_bootloader(isodir)
         self._configure_efi_bootloader(isodir)
 
