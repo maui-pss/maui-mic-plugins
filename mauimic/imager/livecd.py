@@ -388,16 +388,20 @@ class x86LiveImageCreator(LiveImageCreatorBase):
             shutil.copy(path, isodir + "/isolinux/")
 
     def __copy_syslinux_background(self, isodest):
-        locations = ["/usr/share/anaconda/boot/syslinux-vesa-splash.",
-                     "/usr/lib/anaconda-runtime/syslinux-vesa-splash."]
-        for ext in ("jpg", "png"):
-            for location in locations:
-                path = self._instroot + location + ext
-                if os.path.exists(background_path):
-                    isodest_path = isodest + ext
-                    shutil.copyfile(path, isodest_path)
-                    return isodest_path
-        return None
+        background_path = self._instroot + \
+                          "/usr/share/anaconda/boot/syslinux-vesa-splash.png"
+
+        if not os.path.exists(background_path):
+            # fallback to F13 location
+            background_path = self._instroot + \
+                              "/usr/lib/anaconda-runtime/syslinux-vesa-splash.png"
+
+            if not os.path.exists(background_path):
+                return False
+
+        shutil.copyfile(background_path, isodest)
+
+        return True
 
     def __copy_kernel_and_initramfs(self, isodir, version, index):
         bootdir = self._instroot + "/boot"
@@ -441,7 +445,7 @@ class x86LiveImageCreator(LiveImageCreatorBase):
 default %(menu)s
 timeout %(timeout)d
 
-%(background)s
+menu background %(background)s
 menu autoboot Starting %(distroname)s in # second{,s}. Press any key to interrupt.
 
 menu clear
@@ -604,11 +608,9 @@ menu tabmsg Press Tab for full configuration options on menu items.
         self.__copy_syslinux_files(isodir, menu,
                                    self.__find_syslinux_mboot())
 
-        background = self.__copy_syslinux_background(isodir + "/isolinux/splash.")
-        if background:
-            background = os.path.basename(background)
-        else:
-            background = ""
+        background = ""
+        if self.__copy_syslinux_background(isodir + "/isolinux/splash.png"):
+            background = "splash.png"
 
         cfg = self.__get_basic_syslinux_config(menu = menu,
                                                background = background,
