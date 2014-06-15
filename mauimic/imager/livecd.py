@@ -351,11 +351,12 @@ class x86LiveImageCreator(LiveImageCreatorBase):
 
     def __find_syslinux_menu(self):
         for menu in ["vesamenu.c32", "menu.c32"]:
-            if os.path.isfile(self._instroot + "/usr/share/syslinux/" + menu):
-                return menu
+            for dir in ("/usr/lib/syslinux/", "/usr/share/syslinux/"):
+                if os.path.isfile(self._instroot + dir + menu):
+                    return menu
 
         raise CreatorError("syslinux not installed : "
-                           "no suitable /usr/share/syslinux/*menu.c32 found")
+                           "no suitable *menu.c32 found")
 
     def __find_syslinux_mboot(self):
         #
@@ -367,13 +368,15 @@ class x86LiveImageCreator(LiveImageCreatorBase):
         return "mboot.c32"
 
     def __copy_syslinux_files(self, isodir, menu, mboot = None):
-        files = ["isolinux.bin", menu]
+        files = ["isolinux.bin", "ldlinux.c32", "libcom32.c32", "libutil.c32", menu]
         if mboot:
             files += [mboot]
 
         for f in files:
-            path = self._instroot + "/usr/share/syslinux/" + f
-
+            if os.path.exists(self._instroot + "/usr/lib/syslinux/" + f):
+                path = self._instroot + "/usr/lib/syslinux/" + f
+            elif os.path.exists(self._instroot + "/usr/share/syslinux/" + f):
+                path = self._instroot + "/usr/share/syslinux/" + f
             if not os.path.isfile(path):
                 raise CreatorError("syslinux not installed : "
                                    "%s not found" % path)
