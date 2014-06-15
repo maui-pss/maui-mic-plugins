@@ -418,7 +418,7 @@ class x86LiveImageCreator(LiveImageCreatorBase):
             shutil.copyfile(bootdir + "/initrd-" + version + ".img",
                             isodir + "/isolinux/initrd" + index + ".img")
         else:
-            logging.error("No initrd or initramfs found for %s" % (version,))
+            msger.error("No initrd or initramfs found for %s" % (version,))
 
         is_xen = False
         if os.path.exists(bootdir + "/xen.gz-" + version[:-3]):
