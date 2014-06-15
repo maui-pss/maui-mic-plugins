@@ -25,6 +25,7 @@ from mic import kickstart, msger
 from mic.utils import fs_related, rpmmisc, runner, misc
 from mic.utils.errors import CreatorError
 from mic.imager.loop import LoopImageCreator
+from mauimic.fs import *
 
 class LiveImageCreatorBase(LoopImageCreator):
     """A base class for LiveCD image creators.
