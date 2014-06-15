@@ -446,10 +446,10 @@ default %(menu)s
 timeout %(timeout)d
 
 menu background %(background)s
-menu autoboot Starting %(distroname)s in # second{,s}. Press any key to interrupt.
+menu autoboot Starting %(title)s in # second{,s}. Press any key to interrupt.
 
 menu clear
-menu title %(distroname)s
+menu title %(title)s
 menu width 78
 menu margin 4
 menu rows 7
