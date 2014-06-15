@@ -170,11 +170,9 @@ class LiveImageCreatorBase(LoopImageCreator):
         def _exists(path):
             return os.path.exists(self._instroot + path)
 
-        if (_exists("/usr/lib/moblin-installer-runtime/checkisomd5") or \
-            _exists("/usr/bin/checkisomd5")):
-            if (os.path.exists("/usr/bin/implantisomd5") or
-               os.path.exists("/usr/lib/anaconda-runtime/implantisomd5")):
-                return True
+        if (exists(self._instroot, "/usr/lib/anaconda-runtime/checkisomd5") or
+            exists(self._instroot, "/usr/bin/checkisomd5")):
+            return True
 
         return False
 
