@@ -164,8 +164,8 @@ class LiveImageCreatorBase(LoopImageCreator):
     #
     def _has_checkisomd5(self):
         """Check whether checkisomd5 is available in the install root."""
-        def _exists(path):
-            return os.path.exists(self._instroot + path)
+        def exists(instroot, path):
+            return os.path.exists(instroot + path)
 
         if (exists(self._instroot, "/usr/lib/anaconda-runtime/checkisomd5") or
             exists(self._instroot, "/usr/bin/checkisomd5")):
