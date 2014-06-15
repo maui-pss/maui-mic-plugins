@@ -27,6 +27,7 @@ from mic.utils import fs_related, runner, misc
 from mic.utils.partitionedfs import PartitionedMount
 from mic.utils.errors import CreatorError, MountError
 from mic.imager.baseimager import BaseImageCreator
+from mauimic.fs import *
 
 class RawImageCreator(BaseImageCreator):
     """Installs a system into a file containing a partitioned disk image.
@@ -57,6 +58,11 @@ class RawImageCreator(BaseImageCreator):
         self.compress_image = compress_image
         #self.getsource = False
         #self.listpkg = False
+
+        self.__modules = ["=ata", "sym53c8xx", "aic7xxx", "=usb", "=firewire",
+                          "=mmc", "=pcmcia", "mptsas", "udf", "virtio_blk",
+                          "virtio_pci", "virtio_scsi", "virtio_net", "virtio_mmio",
+                          "virtio_balloon", "virtio-rng"]
 
         self._dep_checks.extend(["sync", "kpartx", "parted", "extlinux"])
 
@@ -527,7 +533,7 @@ class RawImageCreator(BaseImageCreator):
         if not os.path.exists(os.path.dirname(path)):
             makedirs(os.path.dirname(path))
         f = open(path, "a")
-        f.write('LIVEOS="yes"\n')
+        f.write('LIVEOS="no"\n')
         f.write('PROBE="no"\n')
         f.write('MODULES+="' + self.__extra_filesystems() + '"\n')
         f.write('MODULES+="' + self.__extra_drivers() + '"\n')
@@ -539,7 +545,6 @@ class RawImageCreator(BaseImageCreator):
         f = open(path, "a")
         f.write('filesystems+="' + self.__extra_filesystems() + ' "\n')
         f.write('drivers+="' + self.__extra_drivers() + ' "\n')
-        f.write('add_dracutmodules+=" dmsquash-live pollcdrom "\n')
         f.write('hostonly="no"\n')
         f.write('dracut_rescue_image="no"\n')
         f.close()
