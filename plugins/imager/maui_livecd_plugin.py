@@ -48,7 +48,8 @@ class LiveCDPlugin(ImagerPlugin):
             msger.warning('maui_livecd cannot support arm images, Quit')
             return
 
-        creator = livecd.LiveCDImageCreator(creatoropts, creatoropts['pkgmgr_pcls'])
+        creator = livecd.LiveCDImageCreator(creatoropts, creatoropts['pkgmgr_pcls'],
+                                            title="Maui", product="Maui")
         creator._recording_pkgs = creatoropts['record_pkgs']
 
         self.check_image_exists(creator.destdir,
