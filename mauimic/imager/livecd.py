@@ -396,19 +396,19 @@ class x86LiveImageCreator(LiveImageCreatorBase):
     def __copy_kernel_and_initramfs(self, isodir, version, index):
         bootdir = self._instroot + "/boot"
 
-        if self._alt_initrd_name:
-            src_initrd_path = os.path.join(bootdir, self._alt_initrd_name)
-        else:
-            src_initrd_path = os.path.join(bootdir, "initrd-" +version+ ".img")
+        shutil.copyfile(bootdir + "/vmlinuz-" + version,
+                        isodir + "/isolinux/vmlinuz" + index)
 
-        try:
-            shutil.copyfile(bootdir + "/vmlinuz-" + version,
-                            isodir + "/isolinux/vmlinuz" + index)
-            shutil.copyfile(src_initrd_path,
+        isDracut = False
+        if os.path.exists(bootdir + "/initramfs-" + version + ".img"):
+            shutil.copyfile(bootdir + "/initramfs-" + version + ".img",
                             isodir + "/isolinux/initrd" + index + ".img")
-        except:
-            raise CreatorError("Unable to copy valid kernels or initrds, "
-                               "please check the repo.")
+            isDracut = True
+        elif os.path.exists(bootdir + "/initrd-" + version + ".img"):
+            shutil.copyfile(bootdir + "/initrd-" + version + ".img",
+                            isodir + "/isolinux/initrd" + index + ".img")
+        else:
+            logging.error("No initrd or initramfs found for %s" % (version,))
 
         is_xen = False
         if os.path.exists(bootdir + "/xen.gz-" + version[:-3]):
@@ -416,7 +416,7 @@ class x86LiveImageCreator(LiveImageCreatorBase):
                             isodir + "/isolinux/xen" + index + ".gz")
             is_xen = True
 
-        return is_xen
+        return (is_xen, isDracut)
 
     def __is_default_kernel(self, kernel, kernels):
         if len(kernels) == 1:
@@ -471,7 +471,7 @@ menu separator
 
 """ % args
 
-    def __get_image_stanza(self, is_xen, **args):
+    def __get_image_stanza(self, is_xen, isDracut, **args):
         if not is_xen:
             template = """label %(short)s
   menu label %(long)s
@@ -553,7 +553,9 @@ menu separator
         index = "0"
         netinst = None
         for version in versions:
-            is_xen = self.__copy_kernel_and_initramfs(isodir, version, index)
+            (is_xen, isDracut) = self.__copy_kernel_and_initramfs(isodir, version, index)
+            if index == "0":
+                self._isDracut = isDracut
 
             default = self.__is_default_kernel(kernel, kernels)
 
@@ -567,7 +569,7 @@ menu separator
             oldmenus["verify"]["long"] = "%s %s" % (oldmenus["verify"]["long"],
                                                     long)
 
-            cfg += self.__get_image_stanza(is_xen,
+            cfg += self.__get_image_stanza(is_xen, isDracut,
                                            fslabel = self.fslabel,
                                            liveargs = kernel_options,
                                            long = long,
@@ -603,7 +605,7 @@ menu separator
                 if len(menu) >= 3:
                     extra = menu[2]
 
-                cfg += self.__get_image_stanza(is_xen,
+                cfg += self.__get_image_stanza(is_xen, isDracut,
                                                fslabel = self.fslabel,
                                                liveargs = kernel_options,
                                                long = long,
@@ -619,7 +621,7 @@ menu separator
             default_index = "0"
 
         if netinst:
-            cfg += self.__get_image_stanza(is_xen,
+            cfg += self.__get_image_stanza(is_xen, isDracut,
                                            fslabel = self.fslabel,
                                            liveargs = kernel_options,
                                            long = netinst["long"],
