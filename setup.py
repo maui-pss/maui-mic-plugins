@@ -45,6 +45,8 @@ if sys.version_info[:2] > (2, 5):
 
 PACKAGES = [MOD_NAME,
             MOD_NAME + '/imager',
+            MOD_NAME + '/kickstart',
+            MOD_NAME + '/kickstart/custom_commands',
            ]
 
 IMAGER_PLUGINS = glob.glob(os.path.join("plugins", "imager", "*.py"))
