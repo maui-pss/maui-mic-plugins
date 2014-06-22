@@ -278,12 +278,12 @@ class RootPasswordConfig(KickstartConfig):
         self.call(["/usr/sbin/usermod", "-p", password, "root"])
 
     def set_unencrypted(self, password):
-        for p in ("/bin/echo", "/usr/sbin/chpasswd"):
+        for p in ("/usr/bin/echo", "/usr/sbin/chpasswd"):
             if not os.path.exists("%s/%s" %(self.instroot, p)):
                 raise errors.KsError("Unable to set unencrypted password due "
                                      "to lack of %s" % p)
 
-        p1 = subprocess.Popen(["/bin/echo", "root:%s" %password],
+        p1 = subprocess.Popen(["/usr/bin/echo", "root:%s" %password],
                               stdout = subprocess.PIPE,
                               preexec_fn = self.chroot)
         p2 = subprocess.Popen(["/usr/sbin/chpasswd", "-m"],
@@ -309,12 +309,12 @@ class UserConfig(KickstartConfig):
         self.call(["/usr/sbin/usermod", "-p", "%s" % password, user])
 
     def set_unencrypted_passwd(self, user, password):
-        for p in ("/bin/echo", "/usr/sbin/chpasswd"):
+        for p in ("/usr/bin/echo", "/usr/sbin/chpasswd"):
             if not os.path.exists("%s/%s" %(self.instroot, p)):
                 raise errors.KsError("Unable to set unencrypted password due "
                                      "to lack of %s" % p)
 
-        p1 = subprocess.Popen(["/bin/echo", "%s:%s" %(user, password)],
+        p1 = subprocess.Popen(["/usr/bin/echo", "%s:%s" %(user, password)],
                               stdout = subprocess.PIPE,
                               preexec_fn = self.chroot)
         p2 = subprocess.Popen(["/usr/sbin/chpasswd", "-m"],
