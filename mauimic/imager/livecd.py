@@ -136,7 +136,7 @@ class LiveImageCreatorBase(LoopImageCreator):
             A sensible default implementation is provided.
         """
 
-        default = "ro quiet rd.live.image rd.luks=0 rd.md=0 rd.dm=0"
+        default = "ro quiet rd.live.image"
 
         if self.ks is None:
             r = default
