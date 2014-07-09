@@ -237,15 +237,17 @@ class RawImageCreator(BaseImageCreator):
 
     def _create_syslinux_config(self):
         #Copy splash
-        splash = "%s/usr/lib/anaconda-runtime/syslinux-vesa-splash.jpg" \
-                 % self._instroot
+        files = ["/usr/share/pixmaps/syslinux-splash.png",
+                 "/usr/share/anaconda/boot/syslinux-vesa-splash.png",
+                 "/usr/lib/anaconda-runtime/syslinux-vesa-splash.png"]
 
-        if os.path.exists(splash):
-            shutil.copy(splash, "%s%s/splash.jpg" \
-                                % (self._instroot, "/boot/extlinux"))
-            splashline = "menu background splash.jpg"
-        else:
-            splashline = ""
+        for f in files:
+            if os.path.exists(self._instroot + f):
+                shutil.copyfile(self._instroot + f, self._instroot + "/boot/extlinux/splash.png")
+                splashline = "menu background splash.png"
+                break
+            else:
+                splashline = ""
 
         (bootdevnum, rootdevnum, rootdev, prefix) = \
                                             self._get_syslinux_boot_config()

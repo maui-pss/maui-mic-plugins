@@ -389,20 +389,16 @@ class x86LiveImageCreator(LiveImageCreatorBase):
             shutil.copy(path, isodir + "/isolinux/")
 
     def __copy_syslinux_background(self, isodest):
-        background_path = self._instroot + \
-                          "/usr/share/anaconda/boot/syslinux-vesa-splash.png"
+        files = ["/usr/share/pixmaps/syslinux-splash.png",
+                 "/usr/share/anaconda/boot/syslinux-vesa-splash.png",
+                 "/usr/lib/anaconda-runtime/syslinux-vesa-splash.png"]
 
-        if not os.path.exists(background_path):
-            # fallback to F13 location
-            background_path = self._instroot + \
-                              "/usr/lib/anaconda-runtime/syslinux-vesa-splash.png"
+        for f in files:
+            if os.path.exists(self._instroot + f):
+                shutil.copyfile(self._instroot + f, isodest)
+                return True
 
-            if not os.path.exists(background_path):
-                return False
-
-        shutil.copyfile(background_path, isodest)
-
-        return True
+        return False
 
     def __copy_kernel_and_initramfs(self, isodir, version, index):
         bootdir = self._instroot + "/boot"
