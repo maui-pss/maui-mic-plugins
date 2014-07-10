@@ -2,6 +2,7 @@
 #
 # Copyright (c) 2007 Red Hat, Inc.
 # Copyright (c) 2009, 2010, 2011 Intel, Inc.
+# Copyright (c) 2014 Pier Luigi Fiorini
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the Free
@@ -197,52 +198,54 @@ class LanguageConfig(KickstartConfig):
     """A class to apply a kickstart language configuration to a system."""
     @apply_wrapper
     def apply(self, kslang):
-        self._check_sysconfig()
-        if kslang.lang:
-            f = open(self.path("/etc/sysconfig/i18n"), "w+")
-            f.write("LANG=\"" + kslang.lang + "\"\n")
-            f.close()
+        lang = kslang.lang or "en_US.UTF-8"
+
+        f = open(self.path("/etc/locale.conf"), "w+")
+        f.write("LANG=\"" + lang + "\"\n")
+        f.close()
 
 class KeyboardConfig(KickstartConfig):
     """A class to apply a kickstart keyboard configuration to a system."""
     @apply_wrapper
     def apply(self, kskeyboard):
-        #
-        # FIXME:
-        #   should this impact the X keyboard config too?
-        #   or do we want to make X be able to do this mapping?
-        #
-        #k = rhpl.keyboard.Keyboard()
-        #if kskeyboard.keyboard:
-        #   k.set(kskeyboard.keyboard)
-        #k.write(self.instroot)
-        pass
+        vcconf_file = self.path("/etc/vconsole.conf")
+        DEFAULT_VC_FONT = "latarcyrheb-sun16"
+
+        if not kskeyboard.keyboard:
+            kskeyboard.keyboard = "us"
+
+        try:
+            with open(vcconf_file, "w") as f:
+                f.write('KEYMAP="%s"\n' % kskeyboard.keyboard)
+
+                # systemd now defaults to a font that cannot display non-ascii
+                # characters, so we have to tell it to use a better one
+                f.write('FONT="%s"\n' % DEFAULT_VC_FONT)
+        except IOError as e:
+            logging.error("Cannot write vconsole configuration file: %s" % e)
 
 class TimezoneConfig(KickstartConfig):
     """A class to apply a kickstart timezone configuration to a system."""
     @apply_wrapper
     def apply(self, kstimezone):
-        self._check_sysconfig()
         tz = kstimezone.timezone or "America/New_York"
         utc = str(kstimezone.isUtc)
 
-        f = open(self.path("/etc/sysconfig/clock"), "w+")
-        f.write("ZONE=\"" + tz + "\"\n")
-        f.write("UTC=" + utc + "\n")
-        f.close()
-        tz_source = "/usr/share/zoneinfo/%s" % (tz)
-        tz_dest = "/etc/localtime"
-        try:
-            cpcmd = fs.find_binary_inchroot('cp', self.instroot)
-            if cpcmd:
-                self.call([cpcmd, "-f", tz_source, tz_dest])
-            else:
-                cpcmd = fs.find_binary_path('cp')
-                subprocess.call([cpcmd, "-f",
-                                 self.path(tz_source),
-                                 self.path(tz_dest)])
-        except (IOError, OSError), (errno, msg):
-            raise errors.KsError("Timezone setting error: %s" % msg)
+        # /etc/localtime is a symlink with glibc > 2.15-41
+        # but if it exists as a file keep it as a file and fall back
+        # to a symlink.
+        localtime = self.path("/etc/localtime")
+        if os.path.isfile(localtime) and \
+           not os.path.islink(localtime):
+            try:
+                shutil.copy2(self.path("/usr/share/zoneinfo/%s" %(tz,)),
+                                localtime)
+            except (OSError, shutil.Error) as e:
+                logging.error("Error copying timezone: %s" %(e.strerror,))
+        else:
+            if os.path.exists(localtime):
+                os.unlink(localtime)
+            os.symlink("/usr/share/zoneinfo/%s" %(tz,), localtime)
 
 class AuthConfig(KickstartConfig):
     """A class to apply a kickstart authconfig configuration to a system."""
@@ -375,18 +378,20 @@ class XConfig(KickstartConfig):
     """A class to apply a kickstart X configuration to a system."""
     @apply_wrapper
     def apply(self, ksxconfig):
-        if ksxconfig.startX and os.path.exists(self.path("/etc/inittab")):
-            f = open(self.path("/etc/inittab"), "rw+")
-            buf = f.read()
-            buf = buf.replace("id:3:initdefault", "id:5:initdefault")
-            f.seek(0)
-            f.write(buf)
-            f.close()
         if ksxconfig.defaultdesktop:
             self._check_sysconfig()
             f = open(self.path("/etc/sysconfig/desktop"), "w")
             f.write("DESKTOP="+ksxconfig.defaultdesktop+"\n")
             f.close()
+
+        if ksxconfig.startX:
+            if not os.path.isdir(self.path('/etc/systemd/system')):
+                logging.warning("there is no /etc/systemd/system directory, cannot update default.target!")
+                return
+            default_target = self.path('/etc/systemd/system/default.target')
+            if os.path.islink(default_target):
+                 os.unlink(default_target)
+            os.symlink('/lib/systemd/system/graphical.target', default_target)
 
 class DesktopConfig(KickstartConfig):
     """A class to apply a kickstart desktop configuration to a system."""
