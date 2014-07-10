@@ -397,6 +397,8 @@ class DesktopConfig(KickstartConfig):
     """A class to apply a kickstart desktop configuration to a system."""
     @apply_wrapper
     def apply(self, ksdesktop):
+        import re
+
         if ksdesktop.defaultdesktop:
             self._check_sysconfig()
             f = open(self.path("/etc/sysconfig/desktop"), "w")
@@ -406,6 +408,14 @@ class DesktopConfig(KickstartConfig):
                 f = open(self.path("/etc/skel/.dmrc"), "w")
                 f.write("[Desktop]\n")
                 f.write("Session="+ksdesktop.defaultdesktop.lower()+"\n")
+                f.close()
+            if os.path.exists(self.path("/etc/sddm.conf")):
+                f = open(self.path("/etc/sddm.conf"), "r")
+                contents = f.read()
+                f.close()
+                f = open(self.path("/etc/sddm.conf"), "w")
+                contents = re.sub(r'LastSession=.*', "LastSession=%s.desktop" % ksdesktop.defaultdesktop.lower(), contents)
+                f.write(contents)
                 f.close()
         if ksdesktop.session:
             if os.path.exists(self.path("/etc/sysconfig/uxlaunch")):
@@ -422,6 +432,14 @@ class DesktopConfig(KickstartConfig):
                 f.write("[daemon]\n")
                 f.write("AutomaticLoginEnable=true\n")
                 f.write("AutomaticLogin=" + ksdesktop.autologinuser + "\n")
+                f.close()
+            if os.path.exists(self.path("/etc/sddm.conf")):
+                f = open(self.path("/etc/sddm.conf"), "r")
+                contents = f.read()
+                f.close()
+                f = open(self.path("/etc/sddm.conf"), "w")
+                contents = re.sub(r'AutoUser=.*', "AutoUser=" + ksdesktop.autologinuser, contents)
+                f.write(contents)
                 f.close()
 
 class MoblinRepoConfig(KickstartConfig):
