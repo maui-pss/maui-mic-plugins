@@ -97,6 +97,8 @@ class LiveImageCreatorBase(LoopImageCreator):
                                  "dd",
                                  "genisoimage"])
 
+        self._isohybrid = True
+
         self._isofstype = "iso9660"
         self.base_on = False
 
@@ -274,11 +276,12 @@ class LiveImageCreatorBase(LoopImageCreator):
 
         """ It should be ok still even if you haven't isohybrid """
         isohybrid = None
-        try:
-            isohybrid = fs_related.find_binary_path("isohybrid")
-            msger.info("isohybrid found")
-        except:
-            msger.warning("isohybrid NOT found")
+        if self._isohybrid:
+            try:
+                isohybrid = fs_related.find_binary_path("isohybrid")
+                msger.info("isohybrid found")
+            except:
+                msger.warning("isohybrid NOT found")
 
         if isohybrid:
             args = [isohybrid, "-partok", iso ]
@@ -343,9 +346,14 @@ class x86LiveImageCreator(LiveImageCreatorBase):
     def __init__(self, *args, **kwargs):
         LiveImageCreatorBase.__init__(self, *args, **kwargs)
         self._efiarch = None
+        self._isolinux_debug = False
+        self._isohybrid = not self._isolinux_debug
 
     def _get_mkisofs_options(self, isodir):
-        return [ "-b", "isolinux/isolinux.bin",
+        isolinuxbin = "isolinux/isolinux.bin"
+        if self._isolinux_debug:
+            isolinuxbin = "isolinux/isolinux-debug.bin"
+        return [ "-b", isolinuxbin,
                  "-c", "isolinux/boot.cat",
                  "-no-emul-boot", "-boot-info-table",
                  "-boot-load-size", "4" ]
@@ -377,6 +385,8 @@ class x86LiveImageCreator(LiveImageCreatorBase):
 
     def __copy_syslinux_files(self, isodir, menu, mboot = None):
         files = ["isolinux.bin", "ldlinux.c32", "libcom32.c32", "libutil.c32", menu]
+        if self._isolinux_debug:
+            files += ["isolinux-debug.bin"]
         if mboot:
             files += [mboot]
 
