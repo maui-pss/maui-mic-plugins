@@ -330,6 +330,8 @@ class UserConfig(KickstartConfig):
         args = [ "/usr/sbin/useradd" ]
         if userconfig.groups:
             args += [ "--groups", string.join(userconfig.groups, ",") ]
+        if userconfig.gecos:
+            args += [ "--comment", userconfig.gecos ]
         if userconfig.name:
             args.append(userconfig.name)
             try:
