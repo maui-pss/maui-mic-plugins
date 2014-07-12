@@ -276,13 +276,16 @@ class LiveImageCreatorBase(LoopImageCreator):
         isohybrid = None
         try:
             isohybrid = fs_related.find_binary_path("isohybrid")
+            msger.info("isohybrid found")
         except:
-            pass
+            msger.warning("isohybrid NOT found")
 
         if isohybrid:
             args = [isohybrid, "-partok", iso ]
             if runner.show(args) != 0:
              	raise CreatorError("Hybrid ISO creation failed!")
+            else:
+                msger.info("Hybrid ISO created successfully")
 
         self.__implant_md5sum(iso)
 
