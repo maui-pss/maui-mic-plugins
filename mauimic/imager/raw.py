@@ -543,6 +543,15 @@ class RawImageCreator(BaseImageCreator):
         f.close()
 
     def __write_dracut_conf(self, path):
+        # XXX: Hack! Mer doesn't have /lib64 because it doesn't support
+        # mixing 32-bit and 64-bit binaries but the lack of /lib64 is a
+        # problem for us because dracut won't find ld-linux-x86_64.so
+        # without it. With this hack we link /lib64 to /lib until
+        # we updated the filesystem package.
+        if not self.target_arch or not self.target_arch == "x86_64":
+            if not os.path.exists(self._instroot + "/lib64"):
+                os.symlink("lib", self._instroot + "/lib64")
+
         if not os.path.exists(os.path.dirname(path)):
             makedirs(os.path.dirname(path))
         f = open(path, "a")
