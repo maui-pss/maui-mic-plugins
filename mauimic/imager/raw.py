@@ -296,12 +296,15 @@ class RawImageCreator(BaseImageCreator):
                 shutil.copy("%s/boot/vmlinuz-%s" %(self._instroot, v),
                             "%s%s/vmlinuz-%s" % (self._instroot,
                                                  "/boot/extlinux/", v))
+                shutil.copy("%s/boot/initramfs-%s.img" %(self._instroot, v),
+                            "%s%s/initramfs-%s.img" % (self._instroot,
+                                                 "/boot/extlinux/", v))
                 syslinux_conf += "label %s%d\n" \
                                  % (self.distro_name.lower(), footlabel)
                 syslinux_conf += "\tmenu label %s (%s)\n" % (self.distro_name, v)
                 syslinux_conf += "\tlinux vmlinuz-%s\n" % v
-                syslinux_conf += "\tappend ro root=%s %s\n" \
-                                 % (rootdev, options)
+                syslinux_conf += "\tappend ro initrd=initramfs-%s.img root=%s %s\n" \
+                                 % (v, rootdev, options)
                 if footlabel == 0:
                     syslinux_conf += "\tmenu default\n"
                 footlabel += 1;
