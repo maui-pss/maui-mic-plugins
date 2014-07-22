@@ -411,14 +411,12 @@ class DesktopConfig(KickstartConfig):
                 f.write("[Desktop]\n")
                 f.write("Session="+ksdesktop.defaultdesktop.lower()+"\n")
                 f.close()
-            if os.path.exists(self.path("/etc/sddm.conf")):
-                f = open(self.path("/etc/sddm.conf"), "r")
-                contents = f.read()
+            if os.path.exists(self.path("/var/lib/sddm")):
+                f = open(self.path("/var/lib/sddm/state.conf"), "w")
+                f.write("[Last]\n")
+                f.write("Session=%s\n" % ksdesktop.defaultdesktop.lower())
                 f.close()
-                f = open(self.path("/etc/sddm.conf"), "w")
-                contents = re.sub(r'LastSession=.*', "LastSession=%s.desktop" % ksdesktop.defaultdesktop.lower(), contents)
-                f.write(contents)
-                f.close()
+                self.call(["/usr/bin/chown", "sddm:sddm", "/var/lib/sddm/state.conf"])
         if ksdesktop.session:
             if os.path.exists(self.path("/etc/sysconfig/uxlaunch")):
                 f = open(self.path("/etc/sysconfig/uxlaunch"), "a+")
@@ -435,14 +433,29 @@ class DesktopConfig(KickstartConfig):
                 f.write("AutomaticLoginEnable=true\n")
                 f.write("AutomaticLogin=" + ksdesktop.autologinuser + "\n")
                 f.close()
-            if os.path.exists(self.path("/etc/sddm.conf")):
-                f = open(self.path("/etc/sddm.conf"), "r")
-                contents = f.read()
-                f.close()
+            if os.path.exists(self.path("/usr/bin/sddm")):
+                if os.path.exists(self.path("/etc/sddm.conf")):
+                    f = open(self.path("/etc/sddm.conf"), "r")
+                    contents = f.read()
+                    f.close()
+                else:
+                    contents = ""
                 f = open(self.path("/etc/sddm.conf"), "w")
-                contents = re.sub(r'AutoUser=.*', "AutoUser=" + ksdesktop.autologinuser, contents)
                 f.write(contents)
+                f.write("\n")
+                f.write("[Autologin]\n")
+                f.write("User=%s\n" % ksdesktop.autologinuser)
+                f.write("Session=%s\n" % ksdesktop.defaultdesktop.lower())
                 f.close()
+                if os.path.exists(self.path("/var/lib/sddm")):
+                    if ksdesktop.defaultdesktop:
+                        f = open(self.path("/var/lib/sddm/state.conf"), "a")
+                    else:
+                        f = open(self.path("/var/lib/sddm/state.conf"), "w")
+                        f.write("[Last]\n")
+                    f.write("User=%s\n" % ksdesktop.autologinuser)
+                    f.close()
+                    self.call(["/usr/bin/chown", "sddm:sddm", "/var/lib/sddm/state.conf"])
 
 class MoblinRepoConfig(KickstartConfig):
     """A class to apply a kickstart desktop configuration to a system."""
