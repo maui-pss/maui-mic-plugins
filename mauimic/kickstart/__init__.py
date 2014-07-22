@@ -447,15 +447,15 @@ class DesktopConfig(KickstartConfig):
                 f.write("User=%s\n" % ksdesktop.autologinuser)
                 f.write("Session=%s\n" % ksdesktop.defaultdesktop.lower())
                 f.close()
-                if os.path.exists(self.path("/var/lib/sddm")):
-                    if ksdesktop.defaultdesktop:
-                        f = open(self.path("/var/lib/sddm/state.conf"), "a")
-                    else:
-                        f = open(self.path("/var/lib/sddm/state.conf"), "w")
-                        f.write("[Last]\n")
-                    f.write("User=%s\n" % ksdesktop.autologinuser)
-                    f.close()
-                    self.call(["/usr/bin/chown", "sddm:sddm", "/var/lib/sddm/state.conf"])
+#                if os.path.exists(self.path("/var/lib/sddm")):
+#                    if ksdesktop.defaultdesktop:
+#                        f = open(self.path("/var/lib/sddm/state.conf"), "a")
+#                    else:
+#                        f = open(self.path("/var/lib/sddm/state.conf"), "w")
+#                        f.write("[Last]\n")
+#                    f.write("User=%s\n" % ksdesktop.autologinuser)
+#                    f.close()
+#                    self.call(["/usr/bin/chown", "sddm:sddm", "/var/lib/sddm/state.conf"])
 
 class MoblinRepoConfig(KickstartConfig):
     """A class to apply a kickstart desktop configuration to a system."""
