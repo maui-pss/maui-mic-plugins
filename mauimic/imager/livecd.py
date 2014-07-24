@@ -249,7 +249,7 @@ class LiveImageCreatorBase(LoopImageCreator):
         # problem for us because dracut won't find ld-linux-x86_64.so
         # without it. With this hack we link /lib64 to /lib until
         # we updated the filesystem package.
-        if rpmmisc.getBaseArch() == "x86_64":
+        if self.target_arch == "x86_64":
             os.symlink("lib", self._instroot + "/lib64")
 
         if not os.path.exists(os.path.dirname(path)):
