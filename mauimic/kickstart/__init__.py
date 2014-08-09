@@ -415,8 +415,8 @@ class DesktopConfig(KickstartConfig):
                 f = open(self.path("/var/lib/sddm/state.conf"), "w")
                 f.write("[Last]\n")
                 f.write("Session=%s\n" % ksdesktop.defaultdesktop.lower())
-                if ksdesktop.autologinuser:
-                    f.write("User=%s\n" % ksdesktop.autologinuser)
+#                if ksdesktop.autologinuser:
+#                    f.write("User=%s\n" % ksdesktop.autologinuser)
                 f.close()
                 self.call(["/usr/bin/chown", "sddm:sddm", "/var/lib/sddm/state.conf"])
         if ksdesktop.session:
@@ -435,20 +435,20 @@ class DesktopConfig(KickstartConfig):
                 f.write("AutomaticLoginEnable=true\n")
                 f.write("AutomaticLogin=" + ksdesktop.autologinuser + "\n")
                 f.close()
-            if os.path.exists(self.path("/usr/bin/sddm")):
-                if os.path.exists(self.path("/etc/sddm.conf")):
-                    f = open(self.path("/etc/sddm.conf"), "r")
-                    contents = f.read()
-                    f.close()
-                else:
-                    contents = ""
-                f = open(self.path("/etc/sddm.conf"), "w")
-                f.write(contents)
-                f.write("\n")
-                f.write("[Autologin]\n")
-                f.write("User=%s\n" % ksdesktop.autologinuser)
-                f.write("Session=%s\n" % ksdesktop.defaultdesktop.lower())
-                f.close()
+#            if os.path.exists(self.path("/usr/bin/sddm")):
+#                if os.path.exists(self.path("/etc/sddm.conf")):
+#                    f = open(self.path("/etc/sddm.conf"), "r")
+#                    contents = f.read()
+#                    f.close()
+#                else:
+#                    contents = ""
+#                f = open(self.path("/etc/sddm.conf"), "w")
+#                f.write(contents)
+#                f.write("\n")
+#                f.write("[Autologin]\n")
+#                f.write("User=%s\n" % ksdesktop.autologinuser)
+#                f.write("Session=%s\n" % ksdesktop.defaultdesktop.lower())
+#                f.close()
 
 class MoblinRepoConfig(KickstartConfig):
     """A class to apply a kickstart desktop configuration to a system."""
