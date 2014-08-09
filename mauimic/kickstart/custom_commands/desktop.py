@@ -1,7 +1,9 @@
 #!/usr/bin/python -tt
 #
 # Copyright (c) 2008, 2009, 2010 Intel, Inc.
+# Copyright (c) 2014 Pier Luigi Fiorini
 #
+# Pier Luigi Fiorini <pierluigi.fiorini@gmail.com>
 # Yi Yang <yi.y.yang@intel.com>
 #
 # This program is free software; you can redistribute it and/or modify it
@@ -25,7 +27,7 @@ class Moblin_Desktop(KickstartCommand):
     def __init__(self, writePriority=0,
                        defaultdesktop=None,
                        defaultdm=None,
-                       autologinuser="meego",
+                       autologinuser=None,
                        session=None):
 
         KickstartCommand.__init__(self, writePriority)
