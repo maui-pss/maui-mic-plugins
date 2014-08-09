@@ -98,7 +98,7 @@ def read_kickstart(path):
     #ks = ksparser.KickstartParser(version)
 
     using_version = ksversion.DEVEL
-    commandMap[using_version]["desktop"] = desktop.Moblin_Desktop
+    commandMap[using_version]["desktop"] = desktop.Maui_Desktop
     commandMap[using_version]["repo"] = moblinrepo.Moblin_Repo
     commandMap[using_version]["bootloader"] = micboot.Moblin_Bootloader
     commandMap[using_version]["part"] = partition.MeeGo_Partition

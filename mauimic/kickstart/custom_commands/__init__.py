@@ -3,7 +3,7 @@ import moblinrepo
 import partition
 
 __all__ = (
-    "Moblin_Desktop",
+    "Maui_Desktop",
     "Moblin_Repo",
     "Moblin_RepoData",
     "MeeGo_Partition",
