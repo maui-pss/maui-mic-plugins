@@ -380,12 +380,6 @@ class XConfig(KickstartConfig):
     """A class to apply a kickstart X configuration to a system."""
     @apply_wrapper
     def apply(self, ksxconfig):
-        if ksxconfig.defaultdesktop:
-            self._check_sysconfig()
-            f = open(self.path("/etc/sysconfig/desktop"), "w")
-            f.write("DESKTOP="+ksxconfig.defaultdesktop+"\n")
-            f.close()
-
         if ksxconfig.startX:
             if not os.path.isdir(self.path('/etc/systemd/system')):
                 logging.warning("there is no /etc/systemd/system directory, cannot update default.target!")
@@ -402,10 +396,6 @@ class DesktopConfig(KickstartConfig):
         import re
 
         if ksdesktop.defaultdesktop:
-            self._check_sysconfig()
-            f = open(self.path("/etc/sysconfig/desktop"), "w")
-            f.write("DESKTOP="+ksdesktop.defaultdesktop+"\n")
-            f.close()
             if os.path.exists(self.path("/etc/gdm/custom.conf")):
                 f = open(self.path("/etc/skel/.dmrc"), "w")
                 f.write("[Desktop]\n")
@@ -425,10 +415,6 @@ class DesktopConfig(KickstartConfig):
                 f.write("session="+ksdesktop.session.lower()+"\n")
                 f.close()
         if ksdesktop.autologinuser:
-            self._check_sysconfig()
-            f = open(self.path("/etc/sysconfig/desktop"), "a+")
-            f.write("AUTOLOGIN_USER=" + ksdesktop.autologinuser + "\n")
-            f.close()
             if os.path.exists(self.path("/etc/gdm/custom.conf")):
                 f = open(self.path("/etc/gdm/custom.conf"), "w")
                 f.write("[daemon]\n")
