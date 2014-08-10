@@ -1099,7 +1099,7 @@ class BaseImageCreator(object):
             kickstart.UserConfig(self._instroot).apply(ksh.user)
             kickstart.ServicesConfig(self._instroot).apply(ksh.services)
             kickstart.XConfig(self._instroot).apply(ksh.xconfig)
-            kickstart.NetworkConfig(self._instroot).apply(ksh.network)
+            #kickstart.NetworkConfig(self._instroot).apply(ksh.network)
             kickstart.RPMMacroConfig(self._instroot).apply(self.ks)
             kickstart.DesktopConfig(self._instroot).apply(ksh.desktop)
             self.__save_repo_keys(repodata)
