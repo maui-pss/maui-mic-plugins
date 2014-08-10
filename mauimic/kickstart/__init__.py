@@ -393,7 +393,7 @@ class XConfig(KickstartConfig):
             default_target = self.path('/etc/systemd/system/default.target')
             if os.path.islink(default_target):
                  os.unlink(default_target)
-            os.symlink('/lib/systemd/system/graphical.target', default_target)
+            os.symlink('/usr/lib/systemd/system/graphical.target', default_target)
 
 class DesktopConfig(KickstartConfig):
     """A class to apply a kickstart desktop configuration to a system."""
